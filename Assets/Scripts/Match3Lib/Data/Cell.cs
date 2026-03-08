@@ -6,5 +6,11 @@ namespace Match3Lib
     {
         public int ElementNum;
         public CellType Type;
+
+        public Cell(int elementNum, CellType type)
+        {
+            ElementNum = elementNum;
+            Type = type;
+        }
     }
 }
