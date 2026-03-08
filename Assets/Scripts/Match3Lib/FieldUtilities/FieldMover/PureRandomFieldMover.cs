@@ -15,8 +15,10 @@ namespace Match3Lib.FieldFiller
             this.random = random ?? throw new ArgumentNullException(nameof(random));
         }
 
-        public IEnumerable<FieldMove> GetFieldMoves(Field field)
+        public FieldsMoveResult GetFieldMoves(Field field, FieldMove[] moves)
         {
+            var movesIndex = 0;
+            
             for (var x = 0; x < field.Width; x++)
             {
                 var writeY = field.Height - 1;
@@ -36,7 +38,7 @@ namespace Match3Lib.FieldFiller
                         var from = new CellCoord(x, y);
                         var to = new CellCoord(x, writeY);
 
-                        yield return new FieldMove(from, to, elementNum);
+                        moves[movesIndex++] = new FieldMove(from, to, elementNum);
                     }
 
                     writeY--;
@@ -53,9 +55,11 @@ namespace Match3Lib.FieldFiller
                     var from = new CellCoord(x, fromY);
                     var to = new CellCoord(x, targetY);
 
-                    yield return new FieldMove(from, to, elementNum);
+                    moves[movesIndex++] = new FieldMove(from, to, elementNum);
                 }
             }
+            
+            return new FieldsMoveResult(movesIndex, moves);
         }
     }
 }

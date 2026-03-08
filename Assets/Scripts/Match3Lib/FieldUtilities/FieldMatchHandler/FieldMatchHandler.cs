@@ -7,15 +7,24 @@ namespace Match3Lib.FieldMatchHandler
 {
     public class FieldMatchHandler : IFieldMatchHandler
     {
-        public void Handle(Field field, IEnumerable<FieldMove> lastMoves, IEnumerable<Match> matches)
+        public void Handle(Field field, FieldsMoveResult moveResult, FieldMatchesResult matchesResult)
         {
-            foreach (var match in matches)
+            SetBombsOnMatchIntersections(field, matchesResult);
+
+            for (var i = 0; i < matchesResult.HorizontalCount; i++)
             {
-                HandleMatch(field, lastMoves, match);
+                var horM = matchesResult.Horizontal[i];
+                HandleMatch(field, moveResult, horM);
+            }
+
+            for (var i = 0; i < matchesResult.VerticalCount; i++)
+            {
+                var vertM = matchesResult.Vertical[i];
+                HandleMatch(field, moveResult, vertM);
             }
         }
 
-        private void HandleMatch(Field field, IEnumerable<FieldMove> moves, Match match)
+        private void HandleMatch(Field field, FieldsMoveResult moveResult, FieldMatch match)
         {
             switch (match.Length)
             {
@@ -24,7 +33,7 @@ namespace Match3Lib.FieldMatchHandler
                     return;
                 case 4:
                 {
-                    var lineCell = TryGetLastMoveInMatch(moves, match, out var last) ? last.To : match.StartCell;
+                    var lineCell = TryGetLastMoveInMatch(moveResult, match, out var last) ? last.To : match.StartCell;
                 
                     ClearMatchCells(field, match);
                     SetLineBonus(field, match, lineCell);
@@ -33,7 +42,7 @@ namespace Match3Lib.FieldMatchHandler
                 }
                 case 5:
                 {
-                    var bombCell = TryGetLastMoveInMatch(moves, match, out var last) ? last.To : match.StartCell;
+                    var bombCell = TryGetLastMoveInMatch(moveResult, match, out var last) ? last.To : match.StartCell;
              
                     ClearMatchCells(field, match);
                     SetBombBonus(field, match, bombCell);
@@ -43,13 +52,46 @@ namespace Match3Lib.FieldMatchHandler
             }
         }
         
-        private bool TryGetLastMoveInMatch(IEnumerable<FieldMove> moves, Match match, out FieldMove last)
+        private void SetBombsOnMatchIntersections(Field field, FieldMatchesResult mResult)
+        {
+            for (var i = 0; i < mResult.HorizontalCount; i++)
+            {
+                var horM = mResult.Horizontal[i];
+
+                for (var j = 0; j < mResult.VerticalCount; j++)
+                {
+                    var verM = mResult.Vertical[j];
+
+                    if (horM.ElementNum != verM.ElementNum)
+                    {
+                        continue;
+                    }
+                    
+                    var x = verM.StartCell.X;
+                    var y = horM.StartCell.Y;
+
+                    if (x >= horM.StartCell.X && x <= horM.EndCell.X &&
+                        y >= verM.StartCell.Y && y <= verM.EndCell.Y)
+                    {
+                        ClearMatchCells(field, horM);
+                        ClearMatchCells(field, verM);
+
+                        var bombCoord = new CellCoord(x, y);
+                        SetBombBonus(field, bombCoord);
+                    }
+                }
+            }
+        }
+        
+        private bool TryGetLastMoveInMatch(FieldsMoveResult moveResult, FieldMatch match, out FieldMove last)
         {
             last = default;
             var found = false;
             
-            foreach (var move in moves)
+            for (var i = 0; i < moveResult.MovesCount; i ++)
             {
+                var move = moveResult.Moves[i];
+                
                 if (!IsCoordInMatch(move.To))
                 {
                     continue;
@@ -69,7 +111,7 @@ namespace Match3Lib.FieldMatchHandler
             }
         }
         
-        private void ClearMatchCells(Field field, Match match)
+        private void ClearMatchCells(Field field, FieldMatch match)
         {
             if (match.Type == MatchType.Horizontal)
             {
@@ -97,7 +139,7 @@ namespace Match3Lib.FieldMatchHandler
             }
         }
 
-        private void SetLineBonus(Field field, Match match, CellCoord lastMoveTo)
+        private void SetLineBonus(Field field, FieldMatch match, CellCoord lastMoveTo)
         {
             var bonusCoord = GetBonusCoordinate(match, lastMoveTo);
             var cell = field[bonusCoord.X, bonusCoord.Y];
@@ -114,17 +156,20 @@ namespace Match3Lib.FieldMatchHandler
             field[bonusCoord.X, bonusCoord.Y] = cell;
         }
 
-        private void SetBombBonus(Field field, Match match, CellCoord lastMoveTo)
+        private void SetBombBonus(Field field, FieldMatch match, CellCoord lastMoveTo)
         {
             var bonusCoord = GetBonusCoordinate(match, lastMoveTo);
-            var cell = field[bonusCoord.X, bonusCoord.Y];
-
-            cell.Type = CellType.Bomb;
-
-            field[bonusCoord.X, bonusCoord.Y] = cell;
+            SetBombBonus(field, bonusCoord);
         }
 
-        private CellCoord GetBonusCoordinate(Match match, CellCoord moveTo)
+        private void SetBombBonus(Field field, CellCoord coord)
+        {
+            var cell = field[coord.X, coord.Y];
+            cell.Type = CellType.Bomb;
+            field[coord.X, coord.Y] = cell;
+        }
+        
+        private CellCoord GetBonusCoordinate(FieldMatch match, CellCoord moveTo)
         {
             var startX = match.StartCell.X;
             var startY = match.StartCell.Y;

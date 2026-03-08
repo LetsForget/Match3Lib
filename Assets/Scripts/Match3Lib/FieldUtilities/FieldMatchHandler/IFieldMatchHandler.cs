@@ -6,6 +6,6 @@ namespace Match3Lib.FieldMatchHandler
 {
     public interface IFieldMatchHandler
     {
-        void Handle(Field field, IEnumerable<FieldMove> lastMoves, IEnumerable<Match> matches);
+        void Handle(Field field, FieldsMoveResult moveResult, FieldMatchesResult matchesResult);
     }
 }
